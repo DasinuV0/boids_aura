@@ -122,5 +122,5 @@ type Acceleration = V2 Float
 for cohesion neighborhood would determine the weighted affect of other boids. 
 -} 
 
-ddd
+
 
