@@ -1,3 +1,5 @@
+dddd
+
 module Main where
 
 import Prelude hiding ( Left, Right )
@@ -121,3 +123,5 @@ type Acceleration = V2 Float
 {- How do I encode neighborhood? I should just modify somehow the updating funtion. For example,
 for cohesion neighborhood would determine the weighted affect of other boids. 
 -} 
+
+
