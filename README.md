@@ -1,2 +1,2 @@
 # Boids
-A simulation of a travel of birds' flockes
+A simulation of the movement of a flock.
