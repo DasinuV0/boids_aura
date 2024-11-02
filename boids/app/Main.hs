@@ -25,7 +25,7 @@ data Boid = Boid
 
 instance Eq Boid where
   ballA == ballB = idx ballA == idx ballB
-
+#peepee
 {-
 Gloss is designed around the Model-View-Update principle. 
 This principle requires the following inputs: a model for our system, a way to draw it 
