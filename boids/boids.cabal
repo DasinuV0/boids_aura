@@ -68,6 +68,8 @@ executable boids
                       gloss ^>= 1.13.2.2,
                       linear ^>= 1.23,
                       random ^>= 1.2.1.2,
+                      GLUT ^>= 2.7.0.16, 
+                      OpenGL ^>= 3.0.3.0
 
     -- Directories containing source files.
     hs-source-dirs:   app
