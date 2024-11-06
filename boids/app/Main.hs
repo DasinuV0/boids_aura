@@ -102,18 +102,68 @@ bLength = 14.0
 
 
 ---------------------------------------------------
--- Several particles and the rules of interaction 
+-- Several particles 
 -- https://github.com/nwtgck/boid-haskell/blob/master/app/Main.hs
 ---------------------------------------------------
 
 type Force        = V2 Float
 type Acceleration = V2 Float
 
+verletStep :: TimeStep -> Model -> Model
+verletStep dt boids =
+  let
+     oldF     = calcForces boids
+     oldA     = fmap (^/ m) oldF
+     newPos   = updatePositions dt boids oldA
+     newF     = calcForces newPos
+     newA     = fmap (^/ m) newF
+     addedF   = oldA ^+^ newA
+     newParts = updateVelocities dt newPos addedF
+  in newParts
 
+
+updatePosition :: TimeStep -> Boid -> Acceleration -> Boid
+updatePosition dt (Boid idx pos vel) acc = Boid idx newPos vel
+  where
+   newPos  = pos ^+^ velPart ^+^ accPart
+   velPart = vel ^* dt
+   accPart = acc ^* (0.5 * dt**2)
+
+
+updateVelocity :: TimeStep -> Boid -> Acceleration -> Boid
+updateVelocity dt boid acc = Boid idx pos vel'
+  where
+    (Boid idx pos vel) = boid
+    transVec = boundaryCondition boid
+    vel' = transVec * (vel + (0.5 * dt) *^ acc)
+
+{-
+The above two equations are used to update the Position and Velocity of a single particle, respectively. 
+To make these functions applicable for multiple Particles, we can use zipWith:
+-}
+
+
+updatePositions, updateVelocities :: TimeStep -> [Boid] -> [Force] -> [Boid]
+updatePositions  dt = zipWith (updatePosition dt)
+updateVelocities dt = zipWith (updateVelocity dt)
+
+
+-- Need to use the rules of seperation to encode calcForces
+
+calcForces 
+---------------------------------------------------
+-- The rules of interaction 
+---------------------------------------------------
 
 -- separation 
 
 -- alignment 
+-- First, we'll make a function that takes an agent and returns a velocity vector.
+
+velVector :: Boid -> V2 Float
+velVector (Boid idx pos vel) = vel
+
+-- let neighborCount = 0 
 
 -- cohesion 
 
