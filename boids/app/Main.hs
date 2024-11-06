@@ -3,7 +3,7 @@ module Main where
 import Prelude hiding ( Left, Right )
 import Graphics.Gloss -- ghci -fno-ghci-sandbox
 import Graphics.Gloss.Data.ViewPort
--- import Linear.Metric
+import Linear.Metric
 import Linear.V2
 import Linear.Vector -- :set -package linear-1.23
 import System.Random -- :set -package random
