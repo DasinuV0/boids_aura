@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Eta reduce" #-}
 module Main where
 
 import Prelude hiding ( Left, Right )
@@ -7,6 +9,7 @@ import Linear.V2
 import Linear.Metric
 import Linear.Vector
 import System.Random
+import GHC.Exts (SpecConstrAnnotation(ForceSpecConstr))
 
 {-
 Just do
@@ -52,7 +55,7 @@ main = do
 
 randomBoid :: Index -> IO Boid
 randomBoid idx = do
-  x <- randomRIO (-7, 7) 
+  x <- randomRIO (-7, 7)
   y <- randomRIO (-7, 7)
   vx <- randomRIO (-1, 1)
   vy <- randomRIO (-1, 1)
@@ -72,7 +75,7 @@ simulationRate = 144
 -- Drawing Functions
 ---------------------------------------------------
 
-drawingFunc :: Model -> Picture 
+drawingFunc :: Model -> Picture
 drawingFunc = pictures . (:) drawWalls . fmap drawBoid                    -- fmap?               usage of (:)? -- we append the result of the drawWalls function to the list of Picture before flattening the list of Picture to be drawn
 
 drawBoid :: Boid -> Picture
@@ -96,7 +99,7 @@ dotSize = 0.05
 type Boids = [Boid]
 
 updateFunc :: ViewPort -> TimeStep -> Model -> Model
-updateFunc _ dt = newtonBounce dt
+updateFunc _ = newtonBounce
 
 maxSpeed :: Float
 maxSpeed = 2.0  -- Maximum speed for boids
@@ -110,11 +113,13 @@ updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
     cohForce = cohesionForce boid boids ^* 0.2
 
     -- Apply friction and scale the velocity
+    pos' = pos + vel' ^* dt -- boundaryCondition (
+
     velWithForces = vel + sepForce + alignForce + cohForce
-    vel' = clampSpeed $ velWithForces ^* 1.003
-    
+    vel'' = clampSpeed $ velWithForces ^* 1.003
+    vel' = boundaryCondition (Boid idx pos vel'')
+
     -- Update position with time step
-    pos' = boundaryCondition (pos + vel' ^* dt)
 
 -- Function to clamp the speed of a velocity vector
 clampSpeed :: Velocity -> Velocity
@@ -131,28 +136,67 @@ newtonBounce dt boids = map (updateBoid boids dt) boids
 ---------------------------------------------------
 -- Boundary 
 ---------------------------------------------------
-
-drawWalls :: Picture
-drawWalls = Circle (toPixels aLength)
+{- 
+if boid.x < leftmargin:
+    boid.vx = boid.vx + turnfactor
+-- if boid.x > rightmargin:
+--     boid.vx = boid.vx - turnfactor
+if boid.y > bottommargin:
+    boid.vy = boid.vy - turnfactor
+if boid.y < topmargin:
+    boid.vy = boid.vy + turnfactor
+-}
 
 boundaryRadius :: Float
 boundaryRadius = 7.5  -- Radius of the circular boundary
 
-boundaryCondition :: Position -> Position
-boundaryCondition (V2 x y) = V2 wrappedX wrappedY
-  where
-    -- Wrap around the X coordinate
-    wrappedX = if x > boundaryRadius then -boundaryRadius
-               else if x < -boundaryRadius then boundaryRadius
-               else x
-    -- Wrap around the Y coordinate
-    wrappedY = if y > boundaryRadius then -boundaryRadius
-               else if y < -boundaryRadius then boundaryRadius
-               else y
+-- boundaryCondition :: Boid -> Velocity
+-- boundaryCondition (Boid _ (V2 x y) (V2 x' y')) 
+--                 | x < leftmargin && y > topmargin = V2 (x'+turnfactor) (y'-turnfactor)
+--                 | x < leftmargin && y < bottommargin = V2 (x'+turnfactor) (y'+turnfactor)
+--                 | x > rightmargin && y > topmargin = V2 (x'-turnfactor) (y'-turnfactor)
+--                 | x > rightmargin && y < bottommargin = V2 (x'-turnfactor) (y'+turnfactor)
+--                 | x > rightmargin = V2 (x'-turnfactor) y'
+--                 | x < leftmargin = V2 (x'-turnfactor) y'
+--                 | y > topmargin = V2 x' (y'-turnfactor)
+--                 | y < bottommargin = V2 x' (y'+turnfactor)
+--                 | otherwise = V2 x' y'
+
+
+
+
+drawWalls :: Picture
+drawWalls = lineLoop $ rectanglePath (toPixels aLength) (toPixels bLength)
+
+boundaryCondition :: Boid -> V2 Float
+boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
+  | (x' > rightmargin) && (y' > topmargin) = V2 (x'' - turnfactor) (y'' - turnfactor)
+  |  x' > rightmargin                      = V2 (x'' - turnfactor) y''
+  |  y' > topmargin                      = V2 x'' (y'' - turnfactor)
+  |  y' < bottommargin                      = V2 x'' (y'' + turnfactor) 
+  |  x' < leftmargin                      = V2 (x'' + turnfactor) y''
+  |  x' < leftmargin && (y' < bottommargin)  = V2 (x'' + turnfactor) (y'' + turnfactor)
+  | otherwise                            = V2   x''    y''
+   where
+     x' | x >= 0 = x + dotSize
+        | x < 0 = x - dotSize  
+     y' | y >= 0 =  y + dotSize 
+        | y < 0 = y - dotSize 
 
 aLength, bLength :: Float
-aLength = 14.0
-bLength = 14.0
+aLength = 11
+bLength = 6.5
+
+leftmargin :: Float
+leftmargin = - (aLength / 2)
+rightmargin :: Float
+rightmargin = aLength/2
+topmargin :: Float
+topmargin = bLength/2
+bottommargin :: Float
+bottommargin = - (bLength / 2)
+
+
 
 ---------------------------------------------------
 -- Several particles and the rules of interaction 
@@ -167,31 +211,33 @@ distanceEU p1 p2 = norm (p1 - p2)
 
 -- separation 
 
+
 separationDistance :: Float
 separationDistance = 0.2  -- Minimum distance to maintain from other boids
 
 -- Compute the separation force for a single boid, based on nearby boids
 separationForce :: Boid -> [Boid] -> Force
-separationForce boid boids = 
-    foldr (\otherBoid acc -> 
-        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < separationDistance 
-        then acc + repelForce boid otherBoid
+separationForce boid = foldr (\otherBoid acc ->
+        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < protectedRange -- separationDistance
+        then acc + avoidForce boid otherBoid -- repelForce boid otherBoid
         else acc
-    ) (V2 0 0) boids
+    ) (V2 0 0)
   where
+    avoidForce :: Boid -> Boid -> Force
+    avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
+
     -- Helper function to calculate repulsion force between two boids
-    repelForce :: Boid -> Boid -> Force
-    repelForce (Boid _ posA _) (Boid _ posB _) =
-        let direction = posA - posB
-            dist = max 0.01 (norm direction) -- Avoid division by zero
-        in if dist < separationDistance 
-           then (normalize direction) ^/ dist  -- The closer, the stronger the force
-           else V2 0 0
+    -- repelForce :: Boid -> Boid -> Force
+    -- repelForce (Boid _ posA _) (Boid _ posB _) =
+    --     let direction = posA - posB
+    --         dist = max 0.01 (norm direction) -- Avoid division by zero
+    --     in if dist < separationDistance
+    --        then (normalize direction) ^/ dist  -- The closer, the stronger the force
+    --        else V2 0 0
 
 -- alignment 
 
-alignmentDistance :: Float
-alignmentDistance = 1.5  -- Distance within which boids align their velocities
+
 
 alignmentForce :: Boid -> [Boid] -> Force
 alignmentForce boid boids =
@@ -214,6 +260,8 @@ alignmentForce boid boids =
 cohesionDistance :: Float
 cohesionDistance = 1.2  -- Distance within which boids move towards average position
 
+
+
 cohesionForce :: Boid -> [Boid] -> Force
 cohesionForce boid boids =
     if count > 0
@@ -230,6 +278,33 @@ cohesionForce boid boids =
     -- Calculate the average position
     avgPos = totalPos ^/ fromIntegral count
 
-{- How do I encode neighborhood? I should just modify somehow the updating funtion. For example,
-for cohesion neighborhood would determine the weighted affect of other boids. 
--} 
+
+
+
+
+
+
+
+
+
+
+--------------------------------------
+-- Parameters
+--------------------------------------
+alignmentDistance :: Float
+alignmentDistance = 1.5  -- Distance within which boids align their velocities
+
+-- visualRange:: Float
+-- visualRange = 3.0
+
+protectedRange :: Float
+protectedRange = 0.5
+
+avoidfactor :: Float
+avoidfactor = 0.2
+
+centeringfactor :: Float
+centeringfactor = 0.05
+
+turnfactor :: Float
+turnfactor = 0.02
