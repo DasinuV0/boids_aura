@@ -136,34 +136,6 @@ newtonBounce dt boids = map (updateBoid boids dt) boids
 ---------------------------------------------------
 -- Boundary 
 ---------------------------------------------------
-{- 
-if boid.x < leftmargin:
-    boid.vx = boid.vx + turnfactor
--- if boid.x > rightmargin:
---     boid.vx = boid.vx - turnfactor
-if boid.y > bottommargin:
-    boid.vy = boid.vy - turnfactor
-if boid.y < topmargin:
-    boid.vy = boid.vy + turnfactor
--}
-
-boundaryRadius :: Float
-boundaryRadius = 7.5  -- Radius of the circular boundary
-
--- boundaryCondition :: Boid -> Velocity
--- boundaryCondition (Boid _ (V2 x y) (V2 x' y')) 
---                 | x < leftmargin && y > topmargin = V2 (x'+turnfactor) (y'-turnfactor)
---                 | x < leftmargin && y < bottommargin = V2 (x'+turnfactor) (y'+turnfactor)
---                 | x > rightmargin && y > topmargin = V2 (x'-turnfactor) (y'-turnfactor)
---                 | x > rightmargin && y < bottommargin = V2 (x'-turnfactor) (y'+turnfactor)
---                 | x > rightmargin = V2 (x'-turnfactor) y'
---                 | x < leftmargin = V2 (x'-turnfactor) y'
---                 | y > topmargin = V2 x' (y'-turnfactor)
---                 | y < bottommargin = V2 x' (y'+turnfactor)
---                 | otherwise = V2 x' y'
-
-
-
 
 drawWalls :: Picture
 drawWalls = lineLoop $ rectanglePath (toPixels aLength) (toPixels bLength)
