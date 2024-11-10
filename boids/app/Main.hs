@@ -102,7 +102,7 @@ updateFunc :: ViewPort -> TimeStep -> Model -> Model
 updateFunc _ = newtonBounce
 
 maxSpeed :: Float
-maxSpeed = 2.0  -- Maximum speed for boids
+maxSpeed = 3.0  -- Maximum speed for boids
 
 updateBoid :: [Boid] -> Float -> Boid -> Boid
 updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
@@ -219,7 +219,7 @@ alignmentForce boid boids =
   where
     -- Gather velocities of nearby boids within alignmentDistance
     (totalVel, count) = foldr (\otherBoid (sumVel, n) ->
-        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < alignmentDistance
+        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < visualRange
         then (sumVel + vel otherBoid, n + 1)
         else (sumVel, n)
       ) (V2 0 0, 0) boids
@@ -242,7 +242,7 @@ cohesionForce boid boids =
   where
     -- Gather positions of nearby boids within cohesionDistance
     (totalPos, count) = foldr (\otherBoid (sumPos, n) ->
-        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < cohesionDistance
+        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < visualRange
         then (sumPos + pos otherBoid, n + 1)
         else (sumPos, n)
       ) (V2 0 0, 0) boids
@@ -264,19 +264,19 @@ cohesionForce boid boids =
 -- Parameters
 --------------------------------------
 alignmentDistance :: Float
-alignmentDistance = 1.5  -- Distance within which boids align their velocities
+alignmentDistance = 0.7  -- Distance within which boids align their velocities
 
--- visualRange:: Float
--- visualRange = 3.0
+visualRange:: Float
+visualRange = 1.2
 
 protectedRange :: Float
-protectedRange = 0.5
+protectedRange = 0.2
 
 avoidfactor :: Float
 avoidfactor = 0.2
 
 centeringfactor :: Float
-centeringfactor = 0.05
+centeringfactor = 0.005
 
 turnfactor :: Float
-turnfactor = 0.02
+turnfactor = 0.025
