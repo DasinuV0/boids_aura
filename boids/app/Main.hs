@@ -46,7 +46,7 @@ type Model = [Boid]
 
 main :: IO ()
 main = do
-  boids <- randomBoids 100
+  boids <- randomBoids 200
   simulate windowDisplay white simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
@@ -84,7 +84,7 @@ drawBoid (Boid _ (V2 x y) _) =                              -- the usage of _ as
   where
     x' = toPixels x
     y' = toPixels y
-    colour = Color (withAlpha 0.8 blue)     -- this will needed to be changed and updated with every frame as well
+    colour = Color (withAlpha 0.8 blue)    
 
 toPixels :: Float -> Float
 toPixels = (* 100.0)
@@ -108,7 +108,7 @@ updateBoid :: [Boid] -> Float -> Boid -> Boid
 updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
   where
     -- Forces
-    sepForce = separationForce boid boids ^* 0.05
+    sepForce = separationForce boid boids ^* 1.5
     alignForce = alignmentForce boid boids ^* 1.25
     cohForce = cohesionForce boid boids ^* 0.2
 
@@ -181,19 +181,21 @@ type Acceleration = V2 Float
 distanceEU :: Position -> Position -> Float
 distanceEU p1 p2 = norm (p1 - p2)
 
+distanceX :: Position -> Position -> Float
+distanceX (V2 x _) (V2 x' _) = abs (x - x')
+distanceY :: Position -> Position -> Float
+distanceY (V2 _ y) (V2 _ y') = abs (y - y')
+squaredDistance :: Position -> Position -> Float
+squaredDistance p1 p2 = sqrt $ distanceEU p1 p2
+
 -- separation 
-
-
-separationDistance :: Float
-separationDistance = 0.2  -- Minimum distance to maintain from other boids
 
 -- Compute the separation force for a single boid, based on nearby boids
 separationForce :: Boid -> [Boid] -> Force
 separationForce boid = foldr (\otherBoid acc ->
-        if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < protectedRange -- separationDistance
+        if boid /= otherBoid && squaredDistance (pos boid) (pos otherBoid) < protectedRange 
         then acc + avoidForce boid otherBoid -- repelForce boid otherBoid
-        else acc
-    ) (V2 0 0)
+        else acc) (V2 0 0)
   where
     avoidForce :: Boid -> Boid -> Force
     avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
@@ -203,9 +205,32 @@ separationForce boid = foldr (\otherBoid acc ->
     -- repelForce (Boid _ posA _) (Boid _ posB _) =
     --     let direction = posA - posB
     --         dist = max 0.01 (norm direction) -- Avoid division by zero
+    --     in if dist < protectedRange
+    --        then (normalize direction) ^/ dist  -- The closer, the stronger the force
+    --        else V2 0 0
+
+
+-- Compute the separation force for a single boid, based on nearby boids
+-- separationForce :: Boid -> [Boid] -> Force
+-- separationForce boid = foldr (\otherBoid acc ->
+--         if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < protectedRange -- separationDistance
+--         then acc + avoidForce boid otherBoid -- repelForce boid otherBoid
+--         else acc
+--     ) (V2 0 0)
+--   where
+--     avoidForce :: Boid -> Boid -> Force
+--     avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
+
+    -- Helper function to calculate repulsion force between two boids
+    -- repelForce :: Boid -> Boid -> Force
+    -- repelForce (Boid _ posA _) (Boid _ posB _) =
+    --     let direction = posA - posB
+    --         dist = max 0.01 (norm direction) -- Avoid division by zero
     --     in if dist < separationDistance
     --        then (normalize direction) ^/ dist  -- The closer, the stronger the force
     --        else V2 0 0
+
+
 
 -- alignment 
 
@@ -237,7 +262,7 @@ cohesionDistance = 1.2  -- Distance within which boids move towards average posi
 cohesionForce :: Boid -> [Boid] -> Force
 cohesionForce boid boids =
     if count > 0
-    then (avgPos ^-^ pos boid) ^* 0.05  -- Scale cohesion effect
+    then (avgPos ^-^ pos boid) ^* centeringfactor -- 0.05  -- Scale cohesion effect
     else V2 0 0
   where
     -- Gather positions of nearby boids within cohesionDistance
@@ -270,10 +295,10 @@ visualRange:: Float
 visualRange = 1.2
 
 protectedRange :: Float
-protectedRange = 0.2
+protectedRange = 0.5
 
 avoidfactor :: Float
-avoidfactor = 0.2
+avoidfactor = 0.02
 
 centeringfactor :: Float
 centeringfactor = 0.005
