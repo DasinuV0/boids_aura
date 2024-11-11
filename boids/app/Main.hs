@@ -46,8 +46,8 @@ type Model = [Boid]
 
 main :: IO ()
 main = do
-  boids <- randomBoids 200
-  simulate windowDisplay white simulationRate boids drawingFunc updateFunc
+  boids <- randomBoids 400
+  simulate windowDisplay black simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
 -- Random Boid Generation
@@ -65,7 +65,7 @@ randomBoids :: Int -> IO [Boid]
 randomBoids n = mapM randomBoid [1..n]
 
 windowDisplay :: Display
-windowDisplay = InWindow "Window" (1440, 900) (200, 800)
+windowDisplay = InWindow "Window" (1440, 900) (200, 800) 
 -- InWindow "Window" (1400, 900) (200, 800)
 
 simulationRate :: Int
@@ -84,7 +84,7 @@ drawBoid (Boid _ (V2 x y) _) =                              -- the usage of _ as
   where
     x' = toPixels x
     y' = toPixels y
-    colour = Color (withAlpha 0.8 blue)    
+    colour = Color (withAlpha 0.8 white)    
 
 toPixels :: Float -> Float
 toPixels = (* 100.0)
@@ -104,19 +104,22 @@ updateFunc _ = newtonBounce
 maxSpeed :: Float
 maxSpeed = 3.0  -- Maximum speed for boids
 
+minSpeed :: Float
+minSpeed = 2.5 
+
 updateBoid :: [Boid] -> Float -> Boid -> Boid
 updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
   where
     -- Forces
-    sepForce = separationForce boid boids ^* 1.5
-    alignForce = alignmentForce boid boids ^* 1.25
+    sepForce = separationForce boid boids ^* 2
+    alignForce = alignmentForce boid boids ^* 0.2
     cohForce = cohesionForce boid boids ^* 0.2
 
     -- Apply friction and scale the velocity
     pos' = pos + vel' ^* dt -- boundaryCondition (
 
     velWithForces = vel + sepForce + alignForce + cohForce
-    vel'' = clampSpeed $ velWithForces ^* 1.003
+    vel'' = clampSpeed' $ clampSpeed $ velWithForces ^* 1.003
     vel' = boundaryCondition (Boid idx pos vel'')
 
     -- Update position with time step
@@ -125,6 +128,13 @@ updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
 clampSpeed :: Velocity -> Velocity
 clampSpeed v = if speed > maxSpeed
                 then normalize v ^* maxSpeed
+                else v
+  where
+    speed = norm v
+
+clampSpeed' :: Velocity -> Velocity
+clampSpeed' v = if speed < minSpeed
+                then normalize v ^* minSpeed
                 else v
   where
     speed = norm v
@@ -148,6 +158,7 @@ boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
   |  y' < bottommargin                      = V2 x'' (y'' + turnfactor) 
   |  x' < leftmargin                      = V2 (x'' + turnfactor) y''
   |  x' < leftmargin && (y' < bottommargin)  = V2 (x'' + turnfactor) (y'' + turnfactor)
+  -- |  x' > leftmargin && x' < rightmargin && y' < topmargin && y' > bottommargin = V2 (x'' + 0.5*turnfactor) (y'' + 0.5*turnfactor)
   | otherwise                            = V2   x''    y''
    where
      x' | x >= 0 = x + dotSize
@@ -156,7 +167,7 @@ boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
         | y < 0 = y - dotSize 
 
 aLength, bLength :: Float
-aLength = 11
+aLength = 10
 bLength = 6.5
 
 leftmargin :: Float
@@ -292,7 +303,7 @@ alignmentDistance :: Float
 alignmentDistance = 0.7  -- Distance within which boids align their velocities
 
 visualRange:: Float
-visualRange = 1.2
+visualRange = 0.9
 
 protectedRange :: Float
 protectedRange = 0.5
@@ -304,4 +315,4 @@ centeringfactor :: Float
 centeringfactor = 0.005
 
 turnfactor :: Float
-turnfactor = 0.025
+turnfactor = 0.02
