@@ -90,7 +90,7 @@ toPixels :: Float -> Float
 toPixels = (* 100.0)
 
 dotSize :: Float
-dotSize = 0.05
+dotSize = 0.04
 
 ---------------------------------------------------
 -- Update Functions
@@ -102,7 +102,7 @@ updateFunc :: ViewPort -> TimeStep -> Model -> Model
 updateFunc _ = newtonBounce
 
 maxSpeed :: Float
-maxSpeed = 3.0  -- Maximum speed for boids
+maxSpeed = 4.0  -- Maximum speed for boids
 
 minSpeed :: Float
 minSpeed = 2.5 
@@ -111,9 +111,9 @@ updateBoid :: [Boid] -> Float -> Boid -> Boid
 updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
   where
     -- Forces
-    sepForce = separationForce boid boids ^* 2
-    alignForce = alignmentForce boid boids ^* 0.2
-    cohForce = cohesionForce boid boids ^* 0.2
+    sepForce = separationForce boid boids -- ^* 3
+    alignForce = alignmentForce boid boids ^* 0.1
+    cohForce = cohesionForce boid boids ^* 0.028
 
     -- Apply friction and scale the velocity
     pos' = pos + vel' ^* dt -- boundaryCondition (
@@ -158,7 +158,6 @@ boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
   |  y' < bottommargin                      = V2 x'' (y'' + turnfactor) 
   |  x' < leftmargin                      = V2 (x'' + turnfactor) y''
   |  x' < leftmargin && (y' < bottommargin)  = V2 (x'' + turnfactor) (y'' + turnfactor)
-  -- |  x' > leftmargin && x' < rightmargin && y' < topmargin && y' > bottommargin = V2 (x'' + 0.5*turnfactor) (y'' + 0.5*turnfactor)
   | otherwise                            = V2   x''    y''
    where
      x' | x >= 0 = x + dotSize
@@ -167,8 +166,8 @@ boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
         | y < 0 = y - dotSize 
 
 aLength, bLength :: Float
-aLength = 10
-bLength = 6.5
+aLength = 8
+bLength = 4
 
 leftmargin :: Float
 leftmargin = - (aLength / 2)
@@ -205,41 +204,12 @@ squaredDistance p1 p2 = sqrt $ distanceEU p1 p2
 separationForce :: Boid -> [Boid] -> Force
 separationForce boid = foldr (\otherBoid acc ->
         if boid /= otherBoid && squaredDistance (pos boid) (pos otherBoid) < protectedRange 
-        then acc + avoidForce boid otherBoid -- repelForce boid otherBoid
+        then acc + avoidForce boid otherBoid 
         else acc) (V2 0 0)
   where
     avoidForce :: Boid -> Boid -> Force
     avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
 
-    -- Helper function to calculate repulsion force between two boids
-    -- repelForce :: Boid -> Boid -> Force
-    -- repelForce (Boid _ posA _) (Boid _ posB _) =
-    --     let direction = posA - posB
-    --         dist = max 0.01 (norm direction) -- Avoid division by zero
-    --     in if dist < protectedRange
-    --        then (normalize direction) ^/ dist  -- The closer, the stronger the force
-    --        else V2 0 0
-
-
--- Compute the separation force for a single boid, based on nearby boids
--- separationForce :: Boid -> [Boid] -> Force
--- separationForce boid = foldr (\otherBoid acc ->
---         if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < protectedRange -- separationDistance
---         then acc + avoidForce boid otherBoid -- repelForce boid otherBoid
---         else acc
---     ) (V2 0 0)
---   where
---     avoidForce :: Boid -> Boid -> Force
---     avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
-
-    -- Helper function to calculate repulsion force between two boids
-    -- repelForce :: Boid -> Boid -> Force
-    -- repelForce (Boid _ posA _) (Boid _ posB _) =
-    --     let direction = posA - posB
-    --         dist = max 0.01 (norm direction) -- Avoid division by zero
-    --     in if dist < separationDistance
-    --        then (normalize direction) ^/ dist  -- The closer, the stronger the force
-    --        else V2 0 0
 
 
 
@@ -265,18 +235,15 @@ alignmentForce boid boids =
 
 -- cohesion 
 
-cohesionDistance :: Float
-cohesionDistance = 1.2  -- Distance within which boids move towards average position
-
 
 
 cohesionForce :: Boid -> [Boid] -> Force
 cohesionForce boid boids =
     if count > 0
-    then (avgPos ^-^ pos boid) ^* centeringfactor -- 0.05  -- Scale cohesion effect
+    then (avgPos ^-^ pos boid) ^* centeringfactor 
     else V2 0 0
   where
-    -- Gather positions of nearby boids within cohesionDistance
+    -- Gather positions of nearby boids within visual range
     (totalPos, count) = foldr (\otherBoid (sumPos, n) ->
         if boid /= otherBoid && distanceEU (pos boid) (pos otherBoid) < visualRange
         then (sumPos + pos otherBoid, n + 1)
@@ -299,20 +266,18 @@ cohesionForce boid boids =
 --------------------------------------
 -- Parameters
 --------------------------------------
-alignmentDistance :: Float
-alignmentDistance = 0.7  -- Distance within which boids align their velocities
 
 visualRange:: Float
-visualRange = 0.9
+visualRange = 0.8
 
 protectedRange :: Float
-protectedRange = 0.5
+protectedRange = 0.4
 
 avoidfactor :: Float
-avoidfactor = 0.02
+avoidfactor = 0.1
 
 centeringfactor :: Float
 centeringfactor = 0.005
 
 turnfactor :: Float
-turnfactor = 0.02
+turnfactor = 0.04
