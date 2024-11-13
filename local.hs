@@ -46,8 +46,8 @@ type Model = [Boid]
 
 main :: IO ()
 main = do
-  boids <- randomBoids 200
-  simulate windowDisplay white simulationRate boids drawingFunc updateFunc
+  boids <- randomBoids 400
+  simulate windowDisplay black simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
 -- Random Boid Generation
@@ -167,8 +167,8 @@ boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
         | y < 0 = y - dotSize 
 
 aLength, bLength :: Float
-aLength = 10
-bLength = 6.5
+aLength = 8
+bLength = 4
 
 leftmargin :: Float
 leftmargin = - (aLength / 2)
@@ -315,4 +315,4 @@ centeringfactor :: Float
 centeringfactor = 0.005
 
 turnfactor :: Float
-turnfactor = 0.02
+turnfactor = 0.04
