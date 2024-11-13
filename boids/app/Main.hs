@@ -46,7 +46,7 @@ type Model = [Boid]
 
 main :: IO ()
 main = do
-  boids <- randomBoids 400
+  boids <- randomBoids 300
   simulate windowDisplay black simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
