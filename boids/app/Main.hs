@@ -145,10 +145,11 @@ clampSpeed' v = if speed < minSpeed
 
 velocityToColor:: Velocity -> Color
 velocityToColor velocity = 
-  let hue = (norm velocity)/maxSpeed 
-      (r, g, b) = if hue <= 0.5
-                then (2 * hue, 0, 1-2*hue)
-                else (1, hue - 0.5, 0)
+  let hue = (maxSpeed - (norm velocity))/(maxSpeed - minSpeed)
+      (r, g, b) = if hue <= 0.005 then (1, 0.8-hue, 0.2) else 
+                  if hue >= 0.1 && hue <= 0.4 then (1, 0.3+0.5*hue, 0.1) else
+                  if hue >= 0.4 && hue <= 0.7 then (1, 0.3+0.5*hue, 0.1) else
+                  if hue >= 0.7 && hue <= 0.95 then (1, 0.3+0.5*hue, 0) else (1, 0.4, 0)
   in makeColor r g b 1.0
 
 -- Apply update to each boid
