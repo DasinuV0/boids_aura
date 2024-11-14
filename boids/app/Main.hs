@@ -48,7 +48,7 @@ type Model = [Boid]
 main :: IO ()
 main = do
   boids <- randomBoids 250
-  simulate windowDisplay white simulationRate boids drawingFunc updateFunc
+  simulate windowDisplay black simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
 -- Random Boid Generation
@@ -121,8 +121,6 @@ updateBoid boids dt boid@(Boid idx pos vel col) = Boid idx pos' vel' col'
     pos' = pos + vel' ^* dt -- boundaryCondition (
 
     velWithForces = vel + sepForce + alignForce + cohForce
-    vel'' = clampSpeed' $ clampSpeed $ velWithForces -- ^* 1.003
-    vel' = boundaryCondition (Boid idx pos vel'')
     vel'' = clampSpeed' $ clampSpeed $ velWithForces ^* 1.003
     vel' = boundaryCondition (Boid idx pos vel'' col)
 
