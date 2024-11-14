@@ -30,7 +30,8 @@ type TimeStep = Float
 data Boid = Boid
   { idx :: Index,
     pos :: Position,
-    vel :: Velocity
+    vel :: Velocity,
+    col :: Color
   }
 
 instance Eq Boid where
@@ -59,7 +60,8 @@ randomBoid idx = do
   y <- randomRIO (-7, 7)
   vx <- randomRIO (-1, 1)
   vy <- randomRIO (-1, 1)
-  return $ Boid idx (V2 x y) (V2 vx vy)
+  let defaultColor = makeColor 1 0 0 1
+  return $ Boid idx (V2 x y) (V2 vx vy) defaultColor
 
 randomBoids :: Int -> IO [Boid]
 randomBoids n = mapM randomBoid [1..n]
@@ -79,12 +81,12 @@ drawingFunc :: Model -> Picture
 drawingFunc = pictures . (:) drawWalls . fmap drawBoid                    -- fmap?               usage of (:)? -- we append the result of the drawWalls function to the list of Picture before flattening the list of Picture to be drawn
 
 drawBoid :: Boid -> Picture
-drawBoid (Boid _ (V2 x y) _) =                              -- the usage of _ as an empty value ? 
+drawBoid (Boid _ (V2 x y) velocity _) =                              -- the usage of _ as an empty value ? 
   translate x' y' $ colour (circleSolid $ toPixels dotSize)  -- translate? maps shaps into the coordinates?
   where
     x' = toPixels x
     y' = toPixels y
-    colour = Color (withAlpha 0.8 blue)    
+    colour = Color (velocityToColor velocity)    
 
 toPixels :: Float -> Float
 toPixels = (* 100.0)
@@ -108,7 +110,7 @@ minSpeed :: Float
 minSpeed = 2.5 
 
 updateBoid :: [Boid] -> Float -> Boid -> Boid
-updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
+updateBoid boids dt boid@(Boid idx pos vel col) = Boid idx pos' vel' col'
   where
     -- Forces
     sepForce = separationForce boid boids -- ^* 3
@@ -121,6 +123,10 @@ updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
     velWithForces = vel + sepForce + alignForce + cohForce
     vel'' = clampSpeed' $ clampSpeed $ velWithForces -- ^* 1.003
     vel' = boundaryCondition (Boid idx pos vel'')
+    vel'' = clampSpeed' $ clampSpeed $ velWithForces ^* 1.003
+    vel' = boundaryCondition (Boid idx pos vel'' col)
+
+    col' = velocityToColor vel'
 
     -- Update position with time step
 
@@ -139,6 +145,14 @@ clampSpeed' v = if speed < minSpeed
   where
     speed = norm v
 
+velocityToColor:: Velocity -> Color
+velocityToColor velocity = 
+  let hue = (norm velocity)/maxSpeed 
+      (r, g, b) = if hue <= 0.5
+                then (2 * hue, 0, 1-2*hue)
+                else (1, hue - 0.5, 0)
+  in makeColor r g b 1.0
+
 -- Apply update to each boid
 newtonBounce :: Float -> Model -> Model
 newtonBounce dt boids = map (updateBoid boids dt) boids
@@ -151,7 +165,7 @@ drawWalls :: Picture
 drawWalls = lineLoop $ rectanglePath (toPixels aLength) (toPixels bLength)
 
 boundaryCondition :: Boid -> V2 Float
-boundaryCondition (Boid _ (V2 x y) (V2 x'' y''))
+boundaryCondition (Boid _ (V2 x y) (V2 x'' y'') _)
   | (x' > rightmargin) && (y' > topmargin) = V2 (x'' - turnfactor) (y'' - turnfactor)
   |  x' > rightmargin                      = V2 (x'' - turnfactor) y''
   |  y' > topmargin                      = V2 x'' (y'' - turnfactor)
@@ -208,7 +222,7 @@ separationForce boid = foldr (\otherBoid acc ->
         else acc) (V2 0 0)
   where
     avoidForce :: Boid -> Boid -> Force
-    avoidForce (Boid _ (V2 x1 y1) _) (Boid _ (V2 x2 y2) _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
+    avoidForce (Boid _ (V2 x1 y1) _ _) (Boid _ (V2 x2 y2) _ _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
 
 
 
