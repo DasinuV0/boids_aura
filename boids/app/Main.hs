@@ -46,7 +46,7 @@ type Model = [Boid]
 
 main :: IO ()
 main = do
-  boids <- randomBoids 200
+  boids <- randomBoids 250
   simulate windowDisplay white simulationRate boids drawingFunc updateFunc
 
 ---------------------------------------------------
@@ -90,7 +90,7 @@ toPixels :: Float -> Float
 toPixels = (* 100.0)
 
 dotSize :: Float
-dotSize = 0.04
+dotSize = 0.03
 
 ---------------------------------------------------
 -- Update Functions
@@ -102,7 +102,7 @@ updateFunc :: ViewPort -> TimeStep -> Model -> Model
 updateFunc _ = newtonBounce
 
 maxSpeed :: Float
-maxSpeed = 4.0  -- Maximum speed for boids
+maxSpeed = 3.5  -- Maximum speed for boids
 
 minSpeed :: Float
 minSpeed = 2.5 
@@ -119,7 +119,7 @@ updateBoid boids dt boid@(Boid idx pos vel) = Boid idx pos' vel'
     pos' = pos + vel' ^* dt -- boundaryCondition (
 
     velWithForces = vel + sepForce + alignForce + cohForce
-    vel'' = clampSpeed' $ clampSpeed $ velWithForces ^* 1.003
+    vel'' = clampSpeed' $ clampSpeed $ velWithForces -- ^* 1.003
     vel' = boundaryCondition (Boid idx pos vel'')
 
     -- Update position with time step
@@ -220,7 +220,7 @@ separationForce boid = foldr (\otherBoid acc ->
 alignmentForce :: Boid -> [Boid] -> Force
 alignmentForce boid boids =
     if count > 0
-    then (avgVel ^-^ vel boid) ^* 0.05  -- Scale alignment effect
+    then (avgVel ^-^ vel boid) ^* scalealignmen -- 0.05  -- Scale alignment effect
     else V2 0 0
   where
     -- Gather velocities of nearby boids within alignmentDistance
@@ -266,18 +266,20 @@ cohesionForce boid boids =
 --------------------------------------
 -- Parameters
 --------------------------------------
+scalealignmen :: Float
+scalealignmen = 0.07
 
 visualRange:: Float
-visualRange = 0.8
+visualRange = 0.6
 
 protectedRange :: Float
-protectedRange = 0.4
+protectedRange = 0.45
 
 avoidfactor :: Float
-avoidfactor = 0.1
+avoidfactor = 0.2 -- 0.05
 
 centeringfactor :: Float
-centeringfactor = 0.005
+centeringfactor = 0.09
 
 turnfactor :: Float
-turnfactor = 0.04
+turnfactor = 0.037
