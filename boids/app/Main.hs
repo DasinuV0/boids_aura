@@ -24,10 +24,10 @@ cabal run
 
 type Position = V2 Float
 type Velocity = V2 Float
-type Index    = Int    -- do we need to identify them?
+type Index    = Int    
 type TimeStep = Float
 
-data Boid = Boid
+data Boid = Boid     
   { idx :: Index,
     pos :: Position,
     vel :: Velocity,
@@ -54,7 +54,7 @@ main = do
 -- Random Boid Generation
 ---------------------------------------------------
 
-randomBoid :: Index -> IO Boid
+randomBoid :: Index -> IO Boid     
 randomBoid idx = do
   x <- randomRIO (-7, 7)
   y <- randomRIO (-7, 7)
@@ -68,7 +68,6 @@ randomBoids n = mapM randomBoid [1..n]
 
 windowDisplay :: Display
 windowDisplay = InWindow "Window" (1440, 900) (200, 800) 
--- InWindow "Window" (1400, 900) (200, 800)
 
 simulationRate :: Int
 simulationRate = 144
@@ -78,11 +77,11 @@ simulationRate = 144
 ---------------------------------------------------
 
 drawingFunc :: Model -> Picture
-drawingFunc = pictures . (:) drawWalls . fmap drawBoid                    -- fmap?               usage of (:)? -- we append the result of the drawWalls function to the list of Picture before flattening the list of Picture to be drawn
+drawingFunc = pictures . (:) drawWalls . fmap drawBoid                    
 
 drawBoid :: Boid -> Picture
-drawBoid (Boid _ (V2 x y) velocity _) =                              -- the usage of _ as an empty value ? 
-  translate x' y' $ colour (circleSolid $ toPixels dotSize)  -- translate? maps shaps into the coordinates?
+drawBoid (Boid _ (V2 x y) velocity _) =                              
+  translate x' y' $ colour (circleSolid $ toPixels dotSize)  
   where
     x' = toPixels x
     y' = toPixels y
@@ -104,7 +103,7 @@ updateFunc :: ViewPort -> TimeStep -> Model -> Model
 updateFunc _ = newtonBounce
 
 maxSpeed :: Float
-maxSpeed = 3.5  -- Maximum speed for boids
+maxSpeed = 3.5  
 
 minSpeed :: Float
 minSpeed = 2.5 
@@ -113,20 +112,20 @@ updateBoid :: [Boid] -> Float -> Boid -> Boid
 updateBoid boids dt boid@(Boid idx pos vel col) = Boid idx pos' vel' col'
   where
     -- Forces
-    sepForce = separationForce boid boids -- ^* 3
+    sepForce = separationForce boid boids 
     alignForce = alignmentForce boid boids ^* 0.1
     cohForce = cohesionForce boid boids ^* 0.028
 
-    -- Apply friction and scale the velocity
-    pos' = pos + vel' ^* dt -- boundaryCondition (
+    -- Update position with time step
+    pos' = pos + vel' ^* dt 
 
+    -- Scale the velocity
     velWithForces = vel + sepForce + alignForce + cohForce
     vel'' = clampSpeed' $ clampSpeed $ velWithForces ^* 1.003
     vel' = boundaryCondition (Boid idx pos vel'' col)
 
     col' = velocityToColor vel'
 
-    -- Update position with time step
 
 -- Function to clamp the speed of a velocity vector
 clampSpeed :: Velocity -> Velocity
@@ -163,7 +162,7 @@ newtonBounce dt boids = map (updateBoid boids dt) boids
 drawWalls :: Picture
 drawWalls = lineLoop $ rectanglePath (toPixels aLength) (toPixels bLength)
 
-boundaryCondition :: Boid -> V2 Float
+boundaryCondition :: Boid -> V2 Float              -- Forces boids to stay with in certain distance from set margins
 boundaryCondition (Boid _ (V2 x y) (V2 x'' y'') _)
   | (x' > rightmargin) && (y' > topmargin) = V2 (x'' - turnfactor) (y'' - turnfactor)
   |  x' > rightmargin                      = V2 (x'' - turnfactor) y''
@@ -194,8 +193,7 @@ bottommargin = - (bLength / 2)
 
 
 ---------------------------------------------------
--- Several particles and the rules of interaction 
--- https://github.com/nwtgck/boid-haskell/blob/master/app/Main.hs
+-- The rules of interaction 
 ---------------------------------------------------
 
 type Force        = V2 Float
@@ -204,14 +202,10 @@ type Acceleration = V2 Float
 distanceEU :: Position -> Position -> Float
 distanceEU p1 p2 = norm (p1 - p2)
 
-distanceX :: Position -> Position -> Float
-distanceX (V2 x _) (V2 x' _) = abs (x - x')
-distanceY :: Position -> Position -> Float
-distanceY (V2 _ y) (V2 _ y') = abs (y - y')
 squaredDistance :: Position -> Position -> Float
 squaredDistance p1 p2 = sqrt $ distanceEU p1 p2
 
--- separation 
+-- Separation 
 
 -- Compute the separation force for a single boid, based on nearby boids
 separationForce :: Boid -> [Boid] -> Force
@@ -224,16 +218,12 @@ separationForce boid = foldr (\otherBoid acc ->
     avoidForce (Boid _ (V2 x1 y1) _ _) (Boid _ (V2 x2 y2) _ _) = V2 ((x1 - x2) * avoidfactor) ((y1 - y2) * avoidfactor)
 
 
-
-
--- alignment 
-
-
+-- Alignment 
 
 alignmentForce :: Boid -> [Boid] -> Force
 alignmentForce boid boids =
     if count > 0
-    then (avgVel ^-^ vel boid) ^* scalealignmen -- 0.05  -- Scale alignment effect
+    then (avgVel ^-^ vel boid) ^* scalealignmen  -- Scale alignment effect
     else V2 0 0
   where
     -- Gather velocities of nearby boids within alignmentDistance
@@ -246,9 +236,8 @@ alignmentForce boid boids =
     -- Calculate the average velocity
     avgVel = totalVel ^/ fromIntegral count
 
--- cohesion 
 
-
+-- Cohesion 
 
 cohesionForce :: Boid -> [Boid] -> Force
 cohesionForce boid boids =
@@ -267,18 +256,10 @@ cohesionForce boid boids =
     avgPos = totalPos ^/ fromIntegral count
 
 
-
-
-
-
-
-
-
-
-
 --------------------------------------
 -- Parameters
 --------------------------------------
+
 scalealignmen :: Float
 scalealignmen = 0.07
 
@@ -289,7 +270,7 @@ protectedRange :: Float
 protectedRange = 0.45
 
 avoidfactor :: Float
-avoidfactor = 0.2 -- 0.05
+avoidfactor = 0.2 
 
 centeringfactor :: Float
 centeringfactor = 0.09
